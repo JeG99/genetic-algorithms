@@ -3,35 +3,25 @@ from deap import algorithms
 from deap import tools
 #from deap.tools.constraint import distance
 import numpy as np
+from numpy.core.defchararray import asarray
 import pandas as pd
 import random
 
-#w = [23, 31, 29, 44, 53, 38, 63, 85, 89, 82]
-#p = [92, 57, 49, 68, 60, 43, 67, 84, 87, 72]
 w = pd.read_csv("p08_w.txt", header=None).rename(columns={0: 'weights'})
 p = pd.read_csv("p08_p.txt", header=None).rename(columns={0: 'profits'})
 
 MAX_WEIGHT = 6404180
 
 def func_eval(individual):
-    """
-    En esta funcion se calcula la evaluacion y el peso. Despues se penaliza en caso de que se pase
-    del peso permitido. En la tarea deben de hacer que solamente se calcule la evaluacion y que
-    en otra se calcule el peso para calcular si la solucion es valida o no. Pueden usar
-    tools.DeltaPenalty o la otra. Checar la lista de funciones en la libreria.
-
-    :param u:
-    :return:
-    """
-    return np.sum(np.asarray(individual) * np.asarray(p)),
+    return np.sum(np.asarray(individual) * np.asarray(p['profits'].values.tolist())),
 
 def feasible(individual):
-    if np.sum(np.asarray(individual) * np.asarray(w)) > MAX_WEIGHT:
+    if np.sum(np.asarray(individual) * np.asarray(w['weights'].values.tolist())) > MAX_WEIGHT:
         return False
     return True
 
 def distance(individual):
-    return np.abs(np.sum(np.asarray(individual) * np.asarray(p)) - 13549094) ** 2
+    return  np.sum(np.asarray(individual) * np.asarray(w['weights'].values.tolist())) - MAX_WEIGHT
 
 # Definir si es un problema de maximizar o minimizar.
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -41,6 +31,7 @@ creator.create("Individual", list, fitness=creator.FitnessMax)
 toolbox = base.Toolbox()
 # Seleccionar la función de selección.
 toolbox.register("select", tools.selRoulette)
+#toolbox.register("select", tools.selTournament, tournsize=24)
 # Seleccionar la función de mutación.
 toolbox.register("mutate", tools.mutFlipBit, indpb=0.1)
 # Seleccionar el de reproducción.
@@ -48,9 +39,7 @@ toolbox.register("mate", tools.cxOnePoint)
 # Definir la función de evaluación.
 toolbox.register("evaluate", func_eval)
 # Definir la penalización.
-
-toolbox.decorate("evaluate", tools.DeltaPenality(feasible, 25916209, distance))
-# toolbox.decorate("evaluate", tools.DeltaPenality(feasible, 0))
+toolbox.decorate("evaluate", tools.DeltaPenality(feasible, 65731, distance))
 # Definir un elemento del individuo.
 toolbox.register("attribute", random.randint, a=0, b=1)
 # Definiendo la creación de individuos como una lista de n elementos.
@@ -58,7 +47,7 @@ toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.att
 # Definiendo la creación de la población.
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-pop = toolbox.population(n=100)
+pop = toolbox.population(n=24)
 
 stats = tools.Statistics(key=lambda ind: ind.fitness.values)
 stats.register("max", np.max)
@@ -66,10 +55,17 @@ stats.register("min", np.min)
 stats.register("avg", np.mean)
 stats.register("std", np.std)
 
-hof = tools.HallOfFame(3)
+hof1 = tools.HallOfFame(5)
+hof2 = tools.HallOfFame(5)
+hof3 = tools.HallOfFame(5)
 
-log = algorithms.eaSimple(population=pop, toolbox=toolbox, halloffame=hof, cxpb=0.4, mutpb=0.8,
-                    ngen=24, stats=stats, verbose=True)
+log1 = algorithms.eaSimple(population=pop, toolbox=toolbox, halloffame=hof1, cxpb=1.0, mutpb=0.8, ngen=10, stats=stats, verbose=True)
+log2 = algorithms.eaMuPlusLambda(population=pop, toolbox=toolbox, mu=12, lambda_=24, cxpb=0.7, mutpb=0.3, ngen=10, stats=stats, halloffame=hof2, verbose=True)
+log3 = algorithms.eaMuCommaLambda(population=pop, toolbox=toolbox, mu=12, lambda_=24, cxpb=0.7, mutpb=0.3, ngen=10, stats=stats, halloffame=hof3, verbose=True)
 
-print(hof)
-print([(func_eval(i)[0], np.sum(np.asarray(i) * np.asarray(w))) for i in hof])
+print('eaSimple:')
+evals1 = [print("Individual: {}, Profit: {}, Weight: {}".format(i, func_eval(i)[0], np.sum(np.asarray(i) * np.asarray(w['weights'].values.tolist())))) for i in hof1]
+print('eaMuPlusLambda:')
+evals2 = [print("Individual: {}, Profit: {}, Weight: {}".format(i, func_eval(i)[0], np.sum(np.asarray(i) * np.asarray(w['weights'].values.tolist())))) for i in hof2]
+print('eaMuCommaLambda:')
+evals3 = [print("Individual: {}, Profit: {}, Weight: {}".format(i, func_eval(i)[0], np.sum(np.asarray(i) * np.asarray(w['weights'].values.tolist())))) for i in hof3]
