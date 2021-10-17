@@ -1,6 +1,6 @@
 from deap import gp, base, creator, tools, algorithms
 import matplotlib.pyplot as plt
-import networkx as nx
+import pygraphviz as pgv
 import operator
 import math
 import random
@@ -73,6 +73,5 @@ results, log = algorithms.eaSimple(pop, toolbox, cxpb=1.0, mutpb=0.8, ngen=100, 
 print(hof)
 #https://deap.readthedocs.io/en/master/api/tools.html#deap.gp.staticLimit
 
-tree = nx.Graph()
-nodes, edges, labels = gp.graph(hof[0])
 
+nodes, edges, labels = graph(expr)
